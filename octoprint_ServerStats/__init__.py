@@ -9,6 +9,10 @@ import re
 class ServerStatsPlugin(octoprint.plugin.StartupPlugin,
                         octoprint.plugin.SettingsPlugin):
 
+    DIVISOR_KILOBYTES = 1024.0
+    DIVISOR_MEGABYTES = DIVISOR_KILOBYTES * DIVISOR_KILOBYTES
+    DIVISOR_GIGABYTES = DIVISOR_MEGABYTES * DIVISOR_KILOBYTES
+
     def __init__(self):
         self._timer = None
         
@@ -46,7 +50,7 @@ class ServerStatsPlugin(octoprint.plugin.StartupPlugin,
 
     ##~~ StartupPlugin mixin
     def on_after_startup(self):
-        self._logger.info("Starting SystemStats")
+        self._logger.info("Starting up...")
         if self.debugMode:
             self.hardware = "Debug"
         elif sys.platform.startswith("linux2"):
@@ -74,13 +78,23 @@ class ServerStatsPlugin(octoprint.plugin.StartupPlugin,
 
     def get_system_stats(self):
         self._logger.info("Collecting system stats.")
-
+        
+        stats = dict()
         if self.debugMode:
-            temp = randrange_float(5, 60, 0.1)
+            stats['temp'] = randrange_float(5, 60, 0.1)
         elif self.tempFunc is not None:
-            temp = self.tempFunc()
+            import psutil
+            stats['temp'] = self.tempFunc()
+            stats['cpu.%'] = psutil.cpu_percent()
+            stats['cpu.pc%'] = psutil.cpu_percent(percpu=True)
+            memory = psutil.virtual_memory()
+            stats['mem.%'] = memory.percent
+            stats['mem.total'] = round(memory.total / DIVISOR_GIGABYTES, 2)
+            stats['mem.available'] = round(memory.available / DIVISOR_GIGABYTES, 2)
+            stats['mem.used'] = round(memory.used / DIVISOR_GIGABYTES, 2)
+            stats['mem.free'] = round(memory.free / DIVISOR_GIGABYTES, 2)
 
-        self._plugin_manager.send_plugin_message(self._identifier, dict(temp=temp))
+        self._plugin_manager.send_plugin_message(self._identifier, stats)
 
     def hardware_overrides(self):
         if self.hardware == "BCM2708":
