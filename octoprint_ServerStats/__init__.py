@@ -69,7 +69,7 @@ class ServerStatsPlugin(octoprint.plugin.StartupPlugin,
                 self.tempFunc = self.temp_from_thermal
 
                 self.hardware_overrides()
-            self.start_timer(5.0)
+            self.start_timer(1.0)
 
     def start_timer(self, interval):
         self._logger.debug("Starting RepeatedTimer with interval: %d" % interval)
@@ -83,16 +83,17 @@ class ServerStatsPlugin(octoprint.plugin.StartupPlugin,
         if self.debugMode:
             stats['temp'] = randrange_float(5, 60, 0.1)
         elif self.tempFunc is not None:
-            import psutil
             stats['temp'] = self.tempFunc()
+
+            import psutil
             stats['cpu.%'] = psutil.cpu_percent()
             stats['cpu.pc%'] = psutil.cpu_percent(percpu=True)
             memory = psutil.virtual_memory()
             stats['mem.%'] = memory.percent
-            stats['mem.total'] = round(memory.total / DIVISOR_GIGABYTES, 2)
-            stats['mem.available'] = round(memory.available / DIVISOR_GIGABYTES, 2)
-            stats['mem.used'] = round(memory.used / DIVISOR_GIGABYTES, 2)
-            stats['mem.free'] = round(memory.free / DIVISOR_GIGABYTES, 2)
+            stats['mem.total'] = round(memory.total / self.DIVISOR_GIGABYTES, 2)
+            stats['mem.available'] = round(memory.available / self.DIVISOR_GIGABYTES, 2)
+            stats['mem.used'] = round(memory.used / self.DIVISOR_GIGABYTES, 2)
+            stats['mem.free'] = round(memory.free / self.DIVISOR_GIGABYTES, 2)
 
         self._plugin_manager.send_plugin_message(self._identifier, stats)
 
